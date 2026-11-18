@@ -1,6 +1,5 @@
-import { statSync, promises as fs } from "node:fs";
+import { statSync, existsSync, promises as fs } from "node:fs";
 import { Logger } from "../Helpers/Logger.ts";
-import { existsSync } from "./utils.ts";
 
 export class CacheManager {
   constructor(private revalidateTime: number, private cacheFile: string) {}
