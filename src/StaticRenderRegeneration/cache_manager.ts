@@ -1,3 +1,4 @@
+import { statSync, promises as fs } from "node:fs";
 import { Logger } from "../Helpers/Logger.ts";
 import { existsSync } from "./utils.ts";
 
@@ -17,7 +18,7 @@ export class CacheManager {
     if (!this.cacheFileExists) {
       return null;
     }
-    const fileInfo = Deno.statSync(this.cacheFilePath);
+    const fileInfo = statSync(this.cacheFilePath);
     return fileInfo.mtime ?? null;
   }
 
@@ -44,7 +45,7 @@ export class CacheManager {
     const text = await response.clone().text();
     const data = new TextEncoder().encode(text);
 
-    Deno.writeFile(this.cacheFilePath, data, { create: true }).catch(() => {
+    await fs.writeFile(this.cacheFilePath, data).catch(() => {
       Logger.warn("Failed to save cache file");
     });
   }

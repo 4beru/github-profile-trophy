@@ -1,93 +1,67 @@
-import { soxa } from "../../deps.ts";
 import {
   EServiceKindError,
-  GithubError,
-  QueryDefaultResponse,
+  type GithubError,
   ServiceError,
 } from "../Types/index.ts";
+import { CONSTANTS } from "../utils.ts";
+
+type GraphQLResponse<T> = {
+  data?: { user?: T | null };
+  errors?: GithubError[];
+  message?: string;
+};
 
 export async function requestGithubData<T = unknown>(
   query: string,
-  variables: { [key: string]: string },
+  variables: Record<string, string>,
   token = "",
-) {
-  const response = await soxa.post("", {}, {
-    data: { query, variables },
+): Promise<T> {
+  if (!token) {
+    throw new ServiceError("GitHub API token is not configured", EServiceKindError.UPSTREAM);
+  }
+
+  const response = await fetch(process.env.GITHUB_API || CONSTANTS.DEFAULT_GITHUB_API, {
+    method: "POST",
     headers: {
-      Authorization: `bearer ${token}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      "User-Agent": "github-profile-trophy",
     },
-  }) as QueryDefaultResponse<{ user: T }>;
-  const responseData = response.data;
+    body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(12000),
+  });
 
-  if (responseData?.errors?.length) {
-    console.error(
-      "GitHub GraphQL errors:",
-      JSON.stringify(responseData.errors, null, 2),
-    );
+  const payload = await response.json() as GraphQLResponse<T>;
 
+  if (payload.errors?.length) {
     throw new ServiceError(
-      responseData.errors
-        .map((error) => error.message)
-        .join("; "),
-      getGraphQLErrorKind(responseData.errors),
+      payload.errors.map((error) => error.message).join("; "),
+      getGraphQLErrorKind(payload.errors),
     );
   }
 
-  if (responseData?.data?.user) {
-    return responseData.data.user;
+  if (!response.ok) {
+    const rateLimited = response.status === 429 ||
+      (response.status === 403 && /rate.limit/i.test(payload.message || ""));
+    throw new ServiceError(
+      rateLimited ? "GitHub API rate limit exceeded" : "GitHub API request failed",
+      rateLimited ? EServiceKindError.RATE_LIMIT : EServiceKindError.UPSTREAM,
+    );
   }
 
-  throw handleError(responseData);
+  if (payload.data?.user) return payload.data.user;
+
+  throw new ServiceError("GitHub user not found", EServiceKindError.NOT_FOUND);
 }
 
 function getGraphQLErrorKind(errors: GithubError[]): EServiceKindError {
-  const errorTypes = errors.map((error) => error.type);
-
-  if (
-    errorTypes.some((type) => type?.includes(EServiceKindError.RATE_LIMIT))
-  ) {
+  const types = errors.map((error) => error.type);
+  if (types.some((type) => type?.includes(EServiceKindError.RATE_LIMIT))) {
     return EServiceKindError.RATE_LIMIT;
   }
-
-  if (errorTypes.every((type) => type === EServiceKindError.NOT_FOUND)) {
+  if (types.every((type) => type === EServiceKindError.NOT_FOUND)) {
     return EServiceKindError.NOT_FOUND;
   }
-
   return EServiceKindError.UPSTREAM;
-}
-
-function handleError(
-  responseData: {
-    data?: unknown;
-    errors?: GithubError[];
-    message?: string;
-    documentation_url?: string;
-  },
-): ServiceError {
-  let isRateLimitExceeded = false;
-  const arrayErrors = responseData?.errors || [];
-
-  if (Array.isArray(arrayErrors) && arrayErrors.length > 0) {
-    isRateLimitExceeded = arrayErrors.some((error) =>
-      error.type.includes(EServiceKindError.RATE_LIMIT)
-    );
-  }
-
-  if (responseData?.message) {
-    isRateLimitExceeded = responseData.message.toLowerCase().includes(
-      "rate limit",
-    );
-  }
-
-  if (isRateLimitExceeded) {
-    throw new ServiceError(
-      "Rate limit exceeded",
-      EServiceKindError.RATE_LIMIT,
-    );
-  }
-
-  throw new ServiceError(
-    "unknown error",
-    EServiceKindError.NOT_FOUND,
-  );
 }

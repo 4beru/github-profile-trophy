@@ -1,31 +1,39 @@
 name: Generate GitHub Profile Trophy SVG
-description: Run the local generator script to produce an SVG.
+description: Generate a trophy SVG using Node.js.
 inputs:
   username:
-    description: "GitHub username to generate the trophy for"
+    description: GitHub username
     required: true
   output_path:
-    description: "Output path to write the SVG"
+    description: Output path
     required: true
-    default: "trophy.svg"
+    default: trophy.svg
   token:
-    description: "PAT or token to use for GitHub API"
+    description: GitHub API token
     required: true
   theme:
-    description: "Theme for the card"
+    description: Theme
     required: false
-    default: "default"
+    default: default
 runs:
-  using: "composite"
+  using: composite
   steps:
-    - name: Setup Deno
-      uses: denoland/setup-deno@v1
+    - name: Set up Node
+      uses: actions/setup-node@v4
       with:
-        deno-version: v1.x
-
+        node-version: "22"
+    - name: Install generator dependencies
+      shell: bash
+      run: npm install --prefix "$GITHUB_ACTION_PATH" --no-audit --no-fund
     - name: Generate trophy
       shell: bash
       env:
         GITHUB_TOKEN1: ${{ inputs.token }}
+        TROPHY_USERNAME: ${{ inputs.username }}
+        TROPHY_OUTPUT: ${{ inputs.output_path }}
+        TROPHY_THEME: ${{ inputs.theme }}
       run: |
-        deno run --allow-net --allow-env --allow-read --allow-write $GITHUB_ACTION_PATH/render_svg.ts "${{ inputs.username }}" "${{ inputs.output_path }}" "${{ inputs.theme }}"
+        output="$TROPHY_OUTPUT"
+        if [[ "$output" != /* ]]; then output="$GITHUB_WORKSPACE/$output"; fi
+        cd "$GITHUB_ACTION_PATH"
+        ./node_modules/.bin/tsx render_svg.ts "$TROPHY_USERNAME" "$output" "$TROPHY_THEME"

@@ -1,3 +1,5 @@
+import { readFileSync, existsSync } from "node:fs";
+
 export function getUrl(request: Request) {
   try {
     return new URL(request.url);
@@ -11,7 +13,7 @@ export function getUrl(request: Request) {
 
 export function readCache(cacheFilePath: string): Uint8Array | null {
   try {
-    return Deno.readFileSync(cacheFilePath);
+    return readFileSync(cacheFilePath);
   } catch {
     return null;
   }
@@ -31,12 +33,3 @@ export async function hashString(message: string): Promise<string> {
   return hashHex;
 }
 
-export const existsSync = (filename: string): boolean => {
-  try {
-    Deno.statSync(filename);
-    // successful, file or directory must exist
-    return true;
-  } catch {
-    return false;
-  }
-};

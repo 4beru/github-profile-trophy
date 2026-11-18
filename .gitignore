@@ -1,6 +1,11 @@
 .vscode
-.env
 .idea
-deno.lock
+.env
+.env.*
+!.env.example
+node_modules/
+.vercel/
+dist/
+coverage/
 *.sh
 **/.DS_Store

@@ -599,7 +599,8 @@ given your username, (Enviroment Vars: See [env-example](env-example)).
 Usage:
 
 ```bash
-deno run --allow-net --allow-env --allow-read --allow-write ./render_svg.ts USERNAME OUTPUT_DIR THEME
+npm install
+GITHUB_TOKEN1=YOUR_TOKEN npm run render -- USERNAME OUTPUT_PATH THEME
 ```
 
 ## Generate an svg inside Github CI (Workflow)
@@ -705,3 +706,16 @@ contributions help keep development going and make this work possible.
 - [@michele-lorenzoni](https://github.com/michele-lorenzoni) — $10 (Nov
   26, 2024)
 - [@skillerious](https://github.com/skillerious) — $10 (Aug 17, 2024)
+
+
+## Deploy on Vercel (Node.js)
+
+This fork runs as a native **Node.js Vercel Function**; it no longer uses the archived `vercel-deno` builder. Vercel builds `api/index.ts` and routes `/` to it via `vercel.json`.
+
+- Set `GITHUB_TOKEN1` in Vercel project environment variables (optionally `GITHUB_TOKEN2` for API failover). Never commit tokens.
+- Deploy the `master` branch. Test `https://YOUR-PROJECT.vercel.app/?username=4beru` and confirm the response is SVG.
+- Local development: `npm install`, then `npm run dev` with the token provided in the environment.
+- Local SVG generation: `npm run render -- 4beru ./trophy.svg default`.
+- Optional Redis: set `ENABLE_REDIS=true` and `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`.
+
+Run `npm run typecheck` and `npm test` before publishing a change.

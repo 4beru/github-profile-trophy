@@ -21,10 +21,7 @@ import { Logger } from "../Helpers/Logger.ts";
 import { requestGithubData } from "./request.ts";
 
 // Need to be here - Exporting from another file makes array of null
-export const TOKENS = [
-  Deno.env.get("GITHUB_TOKEN1"),
-  Deno.env.get("GITHUB_TOKEN2"),
-];
+export const TOKENS = [process.env.GITHUB_TOKEN1, process.env.GITHUB_TOKEN2].filter((token): token is string => Boolean(token));
 
 export class GithubApiService extends GithubRepository {
   async requestUserAll(
@@ -82,11 +79,14 @@ export class GithubApiService extends GithubRepository {
     variables: { [key: string]: string },
   ) {
     try {
+      if (!TOKENS.length) {
+        return new ServiceError("GitHub API token is not configured", EServiceKindError.UPSTREAM);
+      }
       const retry = new Retry(
         TOKENS.length,
         CONSTANTS.DEFAULT_GITHUB_RETRY_DELAY,
       );
-      return await retry.fetch<Promise<T>>(async ({ attempt }) => {
+      return await retry.fetch<T>(async ({ attempt }) => {
         return await requestGithubData(
           query,
           variables,
@@ -103,7 +103,7 @@ export class GithubApiService extends GithubRepository {
       } else {
         Logger.error(error);
       }
-      return new ServiceError("not found", EServiceKindError.NOT_FOUND);
+      return new ServiceError("GitHub API request failed", EServiceKindError.UPSTREAM);
     }
   }
 }

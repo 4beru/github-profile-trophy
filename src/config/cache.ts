@@ -1,72 +1,65 @@
-import { Bulk, connect, Redis } from "../../deps.ts";
+import { createClient } from "redis";
 import { Logger } from "../Helpers/Logger.ts";
 import { CONSTANTS } from "../utils.ts";
 
-const enableCache: boolean = Deno.env.get("ENABLE_REDIS") === "true";
+const enabled = process.env.ENABLE_REDIS === "true";
 
-// https://developer.redis.com/develop/deno/
 class CacheProvider {
   private static instance: CacheProvider;
-  public client: Redis | null = null;
-
-  private constructor() {}
+  private client: ReturnType<typeof createClient> | null = null;
+  private connection: Promise<ReturnType<typeof createClient>> | null = null;
 
   static getInstance(): CacheProvider {
-    if (!CacheProvider.instance) {
-      CacheProvider.instance = new CacheProvider();
-    }
-    return CacheProvider.instance;
+    return (CacheProvider.instance ??= new CacheProvider());
   }
 
-  async connect(): Promise<void> {
-    if (!enableCache) return;
-    this.client = await connect({
-      hostname: Deno.env.get("REDIS_HOST") || "",
-      port: Number(Deno.env.get("REDIS_PORT")) || 6379,
-      username: Deno.env.get("REDIS_USERNAME") || undefined,
-      password: Deno.env.get("REDIS_PASSWORD") || undefined,
+  private connect(): Promise<ReturnType<typeof createClient>> {
+    if (this.connection) return this.connection;
+    const client = createClient({
+      socket: {
+        host: process.env.REDIS_HOST || "localhost",
+        port: Number(process.env.REDIS_PORT) || 6379,
+        connectTimeout: 1500,
+        reconnectStrategy: false,
+      },
+      username: process.env.REDIS_USERNAME || undefined,
+      password: process.env.REDIS_PASSWORD || undefined,
     });
+    client.on("error", (error) => Logger.warn(`Redis: ${error.message}`));
+    this.connection = client.connect().then(() => {
+      this.client = client;
+      return client;
+    }).catch((error) => {
+      this.connection = null;
+      throw error;
+    });
+    return this.connection;
   }
 
-  async get(key: string): Promise<Bulk | undefined> {
-    if (!enableCache) return undefined;
-
+  async get(key: string): Promise<string | undefined> {
+    if (!enabled) return undefined;
     try {
-      if (!this.client) {
-        await this.connect();
-      }
-
-      return await this.client?.get(key);
+      return (await (await this.connect()).get(key)) ?? undefined;
     } catch {
       return undefined;
     }
   }
 
   async set(key: string, value: string): Promise<void> {
-    if (!enableCache) return;
-
+    if (!enabled) return;
     try {
-      if (!this.client) {
-        await this.connect();
-      }
-      await this.client?.set(key, value, {
-        px: CONSTANTS.REDIS_TTL,
-      });
-    } catch (e) {
-      Logger.error(`Failed to set cache: ${e.message}`);
+      await (await this.connect()).set(key, value, { PX: CONSTANTS.REDIS_TTL });
+    } catch (error) {
+      Logger.warn(`Redis cache write failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   async del(key: string): Promise<void> {
-    if (!enableCache) return;
-
+    if (!enabled) return;
     try {
-      if (!this.client) {
-        await this.connect();
-      }
-      await this.client?.del(key);
-    } catch (e) {
-      Logger.error(`Failed to delete cache: ${e.message}`);
+      await (await this.connect()).del(key);
+    } catch {
+      // Cache failures must not fail SVG generation.
     }
   }
 }

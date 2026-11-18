@@ -1,13 +1,7 @@
-FROM denoland/deno:latest
-
-# Create working directory
+FROM node:22-alpine
 WORKDIR /app
-
-# Copy source
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 COPY . .
-
-# Compile the main app
-RUN deno cache main.ts
-
-# Run the app
-CMD ["deno", "run", "-A", "main.ts"]
+EXPOSE 8080
+CMD ["npm", "start"]
