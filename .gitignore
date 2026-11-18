@@ -9,3 +9,6 @@ dist/
 coverage/
 *.sh
 **/.DS_Store
+
+# Function bundle created by npm run build
+api/index.js

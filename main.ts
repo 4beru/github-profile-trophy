@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import handler from "./api/index.ts";
+import handler from "./src/handler.ts";
 
 const port = Number(process.env.PORT) || 8080;
 

@@ -1,13 +1,13 @@
-import { Card } from "../src/card.ts";
-import { CONSTANTS, parseParams } from "../src/utils.ts";
-import { COLORS, type Theme } from "../src/theme.ts";
-import { Error400 } from "../src/error_page.ts";
-import { staticRenderRegeneration } from "../src/StaticRenderRegeneration/index.ts";
-import { GithubRepositoryService } from "../src/Repository/GithubRepository.ts";
-import { GithubApiService } from "../src/Services/GithubApiService.ts";
-import { ServiceError } from "../src/Types/index.ts";
-import { ErrorPage } from "../src/pages/Error.ts";
-import { cacheProvider } from "../src/config/cache.ts";
+import { Card } from "./card.ts";
+import { CONSTANTS, parseParams } from "./utils.ts";
+import { COLORS, type Theme } from "./theme.ts";
+import { Error400 } from "./error_page.ts";
+import { staticRenderRegeneration } from "./StaticRenderRegeneration/index.ts";
+import { GithubRepositoryService } from "./Repository/GithubRepository.ts";
+import { GithubApiService } from "./Services/GithubApiService.ts";
+import { ServiceError } from "./Types/index.ts";
+import { ErrorPage } from "./pages/Error.ts";
+import { cacheProvider } from "./config/cache.ts";
 
 const serviceProvider = new GithubApiService();
 const client = new GithubRepositoryService(serviceProvider).repository;
