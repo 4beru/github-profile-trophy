@@ -9,7 +9,7 @@
     "render": "tsx render_svg.ts",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "build": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=api/index.js"
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --packages=external --outfile=dist/handler.js"
   },
   "dependencies": {
     "redis": "^5.0.0",
